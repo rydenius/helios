@@ -169,3 +169,33 @@ Releasing
 
     # Push it
     ./push-release.sh
+
+Running Helios In Docker
+------------------------
+```sh
+
+# Create Helios Docker Image
+cd docker
+make
+
+# Start Helios Container
+docker run -d -e DOCKER_HOST=$DOCKER_HOST -e HELIOS_NAME=standalone -p 5801:5801 helios-standalone
+
+# Get the Helios Master URI
+export HELIOS_URI=http://$(echo ${DOCKER_HOST} | sed 's/^[a-zA-Z]\{1,\}:\/\///' | cut -d: -f1):5801
+
+# Poke the master
+helios -z $HELIOS_URI hosts
+
+# Create a Job
+helios -z $HELIOS_URI create test:1 busybox -- sh -c "while :; do sleep 1; done"
+
+# Deploy it
+helios -z $HELIOS_URI deploy test:1 standalone
+
+# Undeploy it
+helios -z $HELIOS_URI undeploy test:1 standalone
+
+# Remove it
+helios -z $HELIOS_URI remove --force test:1
+```
