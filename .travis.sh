@@ -29,6 +29,7 @@ case "$1" in
   before_deploy)
     tar --xform s:^.*/:: -czf debs.tgz helios-tools/target/*.{deb,changes} helios-services/target/*.{deb,changes}
     tar -ztvf debs.tgz
+    cp helios-tools/target/helios-tools*-shaded.jar helios-tools/target/helios-tools-shaded.jar
     ;;
 
   after_deploy)
