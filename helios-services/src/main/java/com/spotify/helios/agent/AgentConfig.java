@@ -22,10 +22,11 @@
 package com.spotify.helios.agent;
 
 import com.spotify.helios.servicescommon.DockerHost;
-import com.yammer.dropwizard.config.Configuration;
 
 import java.nio.file.Path;
 import java.util.Map;
+
+import io.dropwizard.Configuration;
 
 public class AgentConfig extends Configuration {
 

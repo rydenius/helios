@@ -21,11 +21,11 @@
 
 package com.spotify.helios.servicescommon;
 
-import com.yammer.dropwizard.lifecycle.Managed;
-
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import io.dropwizard.lifecycle.Managed;
 
 import static com.google.common.util.concurrent.MoreExecutors.getExitingScheduledExecutorService;
 import static java.util.concurrent.TimeUnit.SECONDS;

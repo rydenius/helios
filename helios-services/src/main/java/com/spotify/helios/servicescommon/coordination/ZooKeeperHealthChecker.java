@@ -22,7 +22,6 @@
 package com.spotify.helios.servicescommon.coordination;
 
 import com.spotify.helios.servicescommon.RiemannFacade;
-import com.yammer.dropwizard.lifecycle.Managed;
 import com.yammer.metrics.core.HealthCheck;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -34,6 +33,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import io.dropwizard.lifecycle.Managed;
 
 public class ZooKeeperHealthChecker extends HealthCheck
     implements Managed, PathChildrenCacheListener, Runnable {

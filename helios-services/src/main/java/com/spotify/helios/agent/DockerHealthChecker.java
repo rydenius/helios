@@ -26,7 +26,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.spotify.helios.servicescommon.RiemannFacade;
 import com.spotify.helios.servicescommon.statistics.MeterRates;
 import com.spotify.helios.servicescommon.statistics.SupervisorMetrics;
-import com.yammer.dropwizard.lifecycle.Managed;
 import com.yammer.metrics.core.HealthCheck;
 
 import org.slf4j.Logger;
@@ -35,6 +34,8 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import io.dropwizard.lifecycle.Managed;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

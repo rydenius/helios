@@ -26,12 +26,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 
 import com.aphyr.riemann.client.RiemannClient;
-import com.yammer.dropwizard.lifecycle.Managed;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.reporting.RiemannReporter;
 import com.yammer.metrics.reporting.RiemannReporter.Config;
 
 import java.io.IOException;
+
+import io.dropwizard.lifecycle.Managed;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.SECONDS;

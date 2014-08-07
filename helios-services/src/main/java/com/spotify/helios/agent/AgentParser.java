@@ -37,8 +37,12 @@ import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import io.dropwizard.jetty.ConnectorFactory;
+import io.dropwizard.server.DefaultServerFactory;
 
 import static com.google.common.io.BaseEncoding.base16;
 import static net.sourceforge.argparse4j.impl.Arguments.append;
@@ -127,8 +131,12 @@ public class AgentParser extends ServiceParser {
     final boolean noHttp = options.getBoolean(noHttpArg.getDest());
 
     if (noHttp) {
-      agentConfig.setHttpConfiguration(null);
+//      agentConfig.setHttpConfiguration(null);
     } else {
+      DefaultServerFactory serverFactory = new DefaultServerFactory();
+      serverFactory.setApplicationConnectors(Collections.<ConnectorFactory>emptyList());
+      agentConfig.setServerFactory(serverFactory);
+
       final HttpConfiguration http = agentConfig.getHttpConfiguration();
       http.setPort(httpAddress.getPort());
       http.setBindHost(httpAddress.getHostString());

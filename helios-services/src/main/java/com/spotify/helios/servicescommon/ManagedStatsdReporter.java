@@ -25,10 +25,11 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 import com.readytalk.metrics.StatsDReporter;
-import com.yammer.dropwizard.lifecycle.Managed;
 import com.yammer.metrics.core.MetricsRegistry;
 
 import java.util.List;
+
+import io.dropwizard.lifecycle.Managed;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.SECONDS;
