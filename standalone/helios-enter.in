@@ -1,0 +1,29 @@
+#!/bin/bash -x
+if [ "x$DOCKER_HOST" == "x" ]; then echo "DOCKER_HOST need to be set"; exit 1; fi
+
+HELIOS_IMAGE=spotify/helios-standalone:$TAG
+
+RUNNING=$(docker inspect -f '{{ .State.Running }}' helios-standalone-container 2>/dev/null)
+
+if [ "$RUNNING" == "true" ] &> /dev/null; then
+	echo 'helios-standalone already running'
+	exit 1
+fi
+
+docker rm helios-standalone-container &> /dev/null
+
+REGISTRAR_HOST_FORMAT='${service}.${protocol}.${domain}'
+# export REGISTRAR_HOST_FORMAT='_spotify-${service}._${protocol}.services.${domain}'
+
+eval $(PATH=.:$PATH helios-env)
+
+docker run -it \
+-e HELIOS_INTERACTIVE=1 \
+-e REGISTRAR_HOST_FORMAT=$REGISTRAR_HOST_FORMAT \
+-e DOCKER_HOST=$DOCKER_HOST \
+-e HELIOS_NAME=standalone.local. \
+-e HOST_ADDRESS=$DOCKER_HOST_ADDRESS \
+-p 5801:5801 \
+--name helios-standalone-container \
+$HELIOS_IMAGE \
+bash -l

@@ -1,0 +1,9 @@
+#!/bin/bash
+if ! docker inspect helios-standalone-container &> /dev/null; then
+	echo 'helios-standalone not running'
+	exit 1
+fi
+
+docker kill helios-standalone-container > /dev/null
+docker rm helios-standalone-container > /dev/null
+echo 'helios-standalone stopped'

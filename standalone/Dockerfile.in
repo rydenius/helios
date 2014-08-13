@@ -1,0 +1,21 @@
+# Helios
+#
+# VERSION               0.1
+#
+# Runs the helios agent and master, controlling a docker daemon specified using the DOCKER_HOST env var.
+
+FROM java:7
+
+ADD ${SKYDNS_PLUGIN_DEB} /
+ADD skydns /
+ADD etcd /
+ADD start.sh /
+
+RUN dpkg -i ${SKYDNS_PLUGIN_DEB}
+RUN apt-get -y install zookeeper
+
+EXPOSE 5801
+
+ENTRYPOINT ["/start.sh"]
+
+ADD ${HELIOS_JAR} /

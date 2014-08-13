@@ -1,0 +1,66 @@
+#!/bin/bash
+if [ "x$DOCKER_HOST" == "x" ]; then echo "DOCKER_HOST need to be set"; exit 1; fi
+
+# Get HELIOS_URI and DOCKER_HOST_RAW
+eval $(PATH=.:$PATH helios-env)
+
+HELIOS_IMAGE=spotify/helios-standalone:0.8.1-SNAPSHOT
+
+RUNNING=$(docker inspect -f '{{ .State.Running }}' helios-standalone-container 2>/dev/null)
+
+if [ "$RUNNING" == "true" ]; then
+	echo 'helios-standalone already running'
+else
+	# Check that DOCKER_HOST is reachable from within the container by starting a
+	# container with a unique name and probing docker for the existence of this
+	# named container, from within the container itself.
+	PROBE=$(cat /dev/urandom | LC_CTYPE=C tr -dc 'a-zA-Z0-9' | head -c 32)
+	docker run --rm --name $PROBE busybox wget -sq http://$DOCKER_HOST_RAW/containers/$PROBE/json &>/dev/null
+	DOCKER_HOST_OK=$?
+	if [ $DOCKER_HOST_OK -ne 0 ]; then
+		echo "Docker was not reachable using DOCKER_HOST=$DOCKER_HOST_RAW from within a container."
+		echo "Please ensure that DOCKER_HOST contains a full hostname or ip address, not localhost or 127.0.0.1, etc."
+		exit 1
+	fi
+
+	docker rm helios-standalone-container &> /dev/null
+	docker inspect "$HELIOS_IMAGE" &>/dev/null || docker pull "$HELIOS_IMAGE"
+	if ! docker inspect "$HELIOS_IMAGE" &>/dev/null; then
+		echo "Failed to pull $HELIOS_IMAGE"
+		exit 1
+	fi
+	REGISTRAR_HOST_FORMAT='${service}.${protocol}.${domain}'
+	# export REGISTRAR_HOST_FORMAT='_spotify-${service}._${protocol}.services.${domain}'
+	CID=$(docker run -d \
+		  -e REGISTRAR_HOST_FORMAT=$REGISTRAR_HOST_FORMAT \
+		  -e DOCKER_HOST=$DOCKER_HOST \
+		  -e HELIOS_NAME=standalone.local. \
+		  -e HOST_ADDRESS=$DOCKER_HOST_ADDRESS \
+		  -p 5801:5801 \
+		  --name helios-standalone-container \
+		  $HELIOS_IMAGE)
+	echo 'helios-standalone started'
+fi
+
+INTERNAL_IP=$(docker inspect -f '{{ .NetworkSettings.IPAddress }}' helios-standalone-container)
+
+echo
+echo "helios-standalone is reachable on: $HELIOS_URI (Internal IP: $INTERNAL_IP)"
+echo
+echo 'To easily interact with helios-standalone, use the helios-standalone wrapper: '
+echo
+echo '    helios-standalone <cmd>'
+echo
+echo 'E.g.:'
+echo
+echo '    helios-standalone create test:1 busybox -- sh -c "while :; do sleep 1; done"'
+echo '    helios-standalone deploy test:1 standalone'
+echo '    helios-standalone status'
+echo
+echo 'Alternatively:'
+echo
+echo '    eval $(helios-env)'
+echo '    helios -z $HELIOS_URI <cmd>'
+echo '    ...'
+echo
+

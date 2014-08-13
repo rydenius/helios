@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ -z "$DOCKER_HOST" ]; then echo "echo DOCKER_HOST must be set"; exit; fi
+DOCKER_HOST_RAW=$(echo $DOCKER_HOST | sed 's/^[a-zA-Z]\{1,\}:\/\///')
+DOCKER_HOST_ADDRESS=$(echo $DOCKER_HOST_RAW | cut -d: -f1)
+HELIOS_URI=http://$DOCKER_HOST_ADDRESS:5801
+echo export DOCKER_HOST_RAW=$DOCKER_HOST_RAW
+echo export DOCKER_HOST_ADDRESS=$DOCKER_HOST_ADDRESS
+echo export HELIOS_URI=$HELIOS_URI

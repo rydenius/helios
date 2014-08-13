@@ -1,0 +1,12 @@
+Source: helios-standalone
+Section: universe/net
+Priority: extra
+Maintainer: Daniel Norberg <dano@spotify.com>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.7.2
+
+Package: helios-standalone
+Architecture: all
+Depends: helios
+Recommends: lxc-docker | docker.io
+Description: Utilities for running Helios locally in a docker container.
