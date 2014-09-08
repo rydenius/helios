@@ -227,7 +227,7 @@ public class Agent extends AbstractIdleService {
         final JobId jobId = entry.getKey();
         final Execution execution = entry.getValue();
 
-        if(!tasks.containsKey(jobId)) {
+        if (!tasks.containsKey(jobId)) {
           log.debug("Setting UNDEPLOY goal for removed job: {}", execution.getJob());
           entry.setValue(execution.withGoal(Goal.UNDEPLOY));
         }
