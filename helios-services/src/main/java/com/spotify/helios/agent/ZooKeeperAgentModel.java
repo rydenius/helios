@@ -21,7 +21,6 @@
 
 package com.spotify.helios.agent;
 
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractIdleService;
@@ -31,7 +30,6 @@ import com.spotify.helios.common.descriptors.Job;
 import com.spotify.helios.common.descriptors.JobId;
 import com.spotify.helios.common.descriptors.Task;
 import com.spotify.helios.common.descriptors.TaskStatus;
-import com.spotify.helios.servicescommon.coordination.Node;
 import com.spotify.helios.servicescommon.coordination.Paths;
 import com.spotify.helios.servicescommon.coordination.PersistentPathChildrenCache;
 import com.spotify.helios.servicescommon.coordination.ZooKeeperClient;
@@ -49,7 +47,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.spotify.helios.common.descriptors.Descriptor.parse;
-import static com.spotify.helios.common.descriptors.Goal.UNDEPLOY;
 
 /**
  * The Helios Agent's view into ZooKeeper.
