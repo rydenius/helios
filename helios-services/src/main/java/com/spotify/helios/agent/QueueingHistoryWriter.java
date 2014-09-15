@@ -37,6 +37,7 @@ import com.spotify.helios.common.descriptors.TaskStatusEvent;
 import com.spotify.helios.servicescommon.PersistentAtomicReference;
 import com.spotify.helios.servicescommon.coordination.Paths;
 import com.spotify.helios.servicescommon.coordination.ZooKeeperClient;
+import com.spotify.helios.servicescommon.coordination.ZooKeeperOperations;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
@@ -278,7 +279,10 @@ public class QueueingHistoryWriter extends AbstractIdleService implements Runnab
             jobId, hostname, item.getTimestamp());
         log.debug("writing queued item to zookeeper {} {}", item.getStatus().getJob().getId(),
             item.getTimestamp());
-        client.ensurePath(historyPath, true);
+        client.ensureNodes(Paths.historyJob(jobId),
+                           Paths.historyJobHosts(jobId),
+                           Paths.historyJobHost(jobId, hostname),
+                           Paths.historyJobHostEvents(jobId, hostname));
         client.createAndSetData(historyPath, item.getStatus().toJsonBytes());
 
         // See if too many

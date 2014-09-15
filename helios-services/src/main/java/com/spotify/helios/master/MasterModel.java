@@ -21,6 +21,7 @@
 
 package com.spotify.helios.master;
 
+import com.spotify.helios.common.ZooKeeperNotInitializedException;
 import com.spotify.helios.common.descriptors.Deployment;
 import com.spotify.helios.common.descriptors.HostStatus;
 import com.spotify.helios.common.descriptors.Job;
@@ -37,7 +38,7 @@ import java.util.Map;
  */
 public interface MasterModel {
 
-  void registerHost(String host, final String id);
+  void registerHost(String host, final String id) throws ZooKeeperNotInitializedException;
 
   void deregisterHost(String host) throws HostNotFoundException, HostStillInUseException;
 
@@ -45,7 +46,7 @@ public interface MasterModel {
 
   HostStatus getHostStatus(String host);
 
-  void addJob(Job job) throws JobExistsException;
+  void addJob(Job job) throws JobExistsException, ZooKeeperNotInitializedException;
 
   Job getJob(JobId job);
 

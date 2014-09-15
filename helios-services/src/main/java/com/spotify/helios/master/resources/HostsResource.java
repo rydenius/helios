@@ -23,6 +23,7 @@ package com.spotify.helios.master.resources;
 
 import com.google.common.base.Optional;
 
+import com.spotify.helios.common.ZooKeeperNotInitializedException;
 import com.spotify.helios.common.descriptors.Deployment;
 import com.spotify.helios.common.descriptors.HostStatus;
 import com.spotify.helios.common.descriptors.JobId;
@@ -99,7 +100,11 @@ public class HostsResource {
   @ExceptionMetered
   public Response.Status put(@PathParam("host") final String host,
                              @QueryParam("id") final String id) {
-    model.registerHost(host, id);
+    try {
+      model.registerHost(host, id);
+    } catch (ZooKeeperNotInitializedException e) {
+      throw badRequest("Zookeeper not initialized");
+    }
     log.info("added host {}", host);
     return Response.Status.OK;
   }

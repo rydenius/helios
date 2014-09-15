@@ -37,6 +37,7 @@ import java.io.IOException;
 
 import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Optional.fromNullable;
+import static com.spotify.helios.servicescommon.coordination.ZooKeeperOperations.create;
 import static java.lang.String.format;
 import static org.apache.curator.framework.recipes.nodes.PersistentEphemeralNode.Mode.EPHEMERAL;
 
@@ -89,15 +90,13 @@ public class AgentZooKeeperRegistrar implements ZooKeeperRegistrarEventListener 
       // This would've been nice to do in a transaction but PathChildrenCache ensures paths
       // so we can't know what paths already exist so assembling a suitable transaction is too
       // painful.
-      client.ensurePath(Paths.configHost(name));
-      client.ensurePath(Paths.configHost(name));
-      client.ensurePath(Paths.configHostJobs(name));
-      client.ensurePath(Paths.configHostPorts(name));
-      client.ensurePath(Paths.statusHost(name));
-      client.ensurePath(Paths.statusHostJobs(name));
-
-      // Finish registration by creating the id node last
-      client.createAndSetData(idPath, id.getBytes(UTF_8));
+      client.transaction((create(Paths.configHost(name),
+                                 Paths.configHostJobs(name),
+                                 Paths.configHostPorts(name),
+                                 Paths.statusHost(name),
+                                 Paths.statusHostJobs(name))),
+                         // Finish registration by creating the id node last
+                         create(idPath, id.getBytes(UTF_8)));
     } else {
       final byte[] bytes = client.getData(idPath);
       final String existingId = bytes == null ? "" : new String(bytes, UTF_8);

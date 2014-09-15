@@ -45,7 +45,6 @@ import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -231,35 +230,12 @@ public class PersistentPathChildrenCache<T> extends AbstractIdleService {
   private Map<String, T> sync() throws KeeperException {
     log.debug("syncing: {}", path);
 
-    List<String> children = null;
+    final List<String> children;
     final Map<String, T> newSnapshot = Maps.newHashMap();
-    final Stat childrenStat = new Stat();
 
     // Fetch new snapshot and register watchers
     try {
-      while(children == null) {
-        final List<String> possibleChildren = curator.getChildren()
-          .storingStatIn(childrenStat)
-          .usingWatcher(childrenWatcher)
-          .forPath(path);
-
-        try {
-          curator.inTransaction()
-            .check().withVersion(childrenStat.getVersion()).forPath(path).and()
-            .check().forPath("/config/id").and()
-            .commit();
-
-          // Transaction was successful, so we can trust the data we just got.
-          children = possibleChildren;
-        } catch (KeeperException.NoNodeException e) {
-          log.error("no id node has been found");
-          // No ID node means something's wrong with the cluster — no need to retry in a tight loop.
-          throw e;
-        } catch (KeeperException.BadVersionException e) {
-          log.debug("config version has changed during update, retrying");
-        }
-      }
-
+      children = curator.getChildren().usingWatcher(childrenWatcher).forPath(path);
       log.debug("children: {}", children);
       for (final String child : children) {
         final String node = ZKPaths.makePath(path, child);

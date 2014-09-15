@@ -48,6 +48,8 @@ public interface ZooKeeperClient {
 
   void ensurePath(String path, boolean excludingLast) throws KeeperException;
 
+  void ensureNodes(String... path) throws KeeperException;
+
   byte[] getData(String path) throws KeeperException;
 
   List<String> getChildren(String path) throws KeeperException;

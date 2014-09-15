@@ -73,6 +73,16 @@ public class ReportingZooKeeperClient implements ZooKeeperClient {
   }
 
   @Override
+  public void ensureNodes(String... nodes) throws KeeperException {
+    try {
+      client.ensureNodes(nodes);
+    } catch (KeeperException e) {
+      reporter.checkException(e, tag, "ensureNodes");
+      throw e;
+    }
+  }
+
+  @Override
   public byte[] getData(String path) throws KeeperException {
     try {
       return client.getData(path);

@@ -196,8 +196,12 @@ public abstract class SystemTestBase {
 
     zk = zooKeeperTestManager();
     listThreads();
-    zk.ensure("/config");
-    zk.ensure("/status");
+    zk.ensure(Paths.configHosts());
+    zk.ensure(Paths.configJobRefs());
+    zk.ensure(Paths.configJobs());
+    zk.ensure(Paths.statusHosts());
+    zk.ensure(Paths.statusMasters());
+    zk.ensure(Paths.historyJobs());
     agentStateDirs = temporaryFolder.newFolder("helios-agents").toPath();
   }
 

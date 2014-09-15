@@ -19,38 +19,14 @@
  * under the License.
  */
 
-package com.spotify.helios.servicescommon.coordination;
+package com.spotify.helios.common;
 
-import com.google.common.base.Joiner;
+import static java.lang.String.format;
 
-import org.apache.curator.framework.api.transaction.CuratorTransaction;
+public class ZooKeeperNotInitializedException extends HeliosException {
 
-import java.util.Arrays;
-import java.util.List;
-
-class CreateEmpty implements ZooKeeperOperation {
-
-  private final List<String> paths;
-
-  CreateEmpty(final String... paths) {
-    this.paths = Arrays.asList(paths);
+  public ZooKeeperNotInitializedException(final String namespace, final Throwable cause) {
+    super(format("Zookeeper does not contain namespace [%s]", namespace), cause);
   }
 
-  CreateEmpty(final List<String> paths) {
-    this.paths = paths;
-  }
-
-  @Override
-  public void register(final CuratorTransaction transaction) throws Exception {
-    for (String path : paths) {
-      transaction.create().forPath(path);
-    }
-  }
-
-  @Override
-  public String toString() {
-    return "CreateEmpty{" +
-           "paths='" + Joiner.on(",").join(paths) + '\'' +
-           '}';
-  }
 }
