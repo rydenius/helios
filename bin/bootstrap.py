@@ -29,6 +29,7 @@ logging.basicConfig(level = logging.INFO, format = "[%(asctime)s] [%(levelname)s
 
 try:
     from kazoo.client import KazooClient
+    from kazoo.exceptions import NoNodeError, RuntimeInconsistency
     from kazoo.handlers.threading import TimeoutError
 except ImportError:
     logging.error("This script uses Kazoo Python libraries to work with Zookeeper")
@@ -43,9 +44,8 @@ DESCRIPTION = """
     Bootstraps a new Helios cluster.
 
     Bootstrapping is done via populating Zookeeper with a basic data structures required
-    by Helios to properly function. These data structures are created in a new namespace
-    with a randomly generated name (an UUID string) to avoid conflicts and to allow many
-    Helios clusters to coexist in a single Zookeeper cluster.
+    by Helios to properly function. The script cannot be be used on a NONEMPTY ZooKeeper
+    cluster.
 """
 
 def main():
@@ -75,15 +75,12 @@ def main():
 
     return status
 
-def bootstrap(client, namespace):
-    node_list = [template % namespace for template in (
-        "/helios/%s",
-        "/helios/%s/config",
-        "/helios/%s/config/hosts",
-        "/helios/%s/config/id",
-        "/helios/%s/status",
-        "/helios/%s/status/hosts"
-    )]
+def bootstrap(client, cluster_id):
+    node_list = [
+        "/config",
+        "/config/id",
+        "/config/id/%s" % cluster_id
+    ]
 
     transaction = client.transaction()
 
@@ -92,21 +89,18 @@ def bootstrap(client, namespace):
     [transaction.check(node, version = -1) for node in node_list]
 
     # Operation results are either True if the given node exists or an exception of NoNodeError or
-    # RuntimeIncosistency type if the given node is not there (1) or if the previous operation has
-    # failed (2), i.e. the previous node doesn't exist.
-    nodes_missing = [result is not True for result in transaction.commit()]
+    # RuntimeIncosistency and RolledBackError types if the previous (1) or following (2) operation
+    # has failed. We want all results to be NoNodeError or RuntimeInconsistency (which means, node
+    # existance check wasn't performed, because node's parent is not there).
+    types = NoNodeError, RuntimeInconsistency
+    nodes_missing = [isinstance(result, types) for result in transaction.commit()]
 
     if not all(nodes_missing):
-        logging.error("Aborting, some nodes already exist in namespace '%s': %s" % (namespace,
+        logging.error("Aborting, some nodes already exist: %s" %
             ", ".join(node_list[idx] for idx, missing in enumerate(nodes_missing) if not missing)
-        ))
+        )
 
         return 1
-
-    if not client.exists("/helios"):
-        # This node can be safely created outside of transaction, because it doesn't have any vital
-        # data or state, but serves as a root for all Helios-related stuff.
-        client.create("/helios")
 
     transaction = client.transaction()
 
@@ -119,13 +113,13 @@ def bootstrap(client, namespace):
     nodes_created = [result == node_list[idx] for idx, result in enumerate(transaction.commit())]
 
     if not all(nodes_created):
-        logging.error("Aborting, couldn't create some nodes in namespace '%s': %s" % (namespace,
+        logging.error("Aborting, couldn't create some nodes: %s" %
             ", ".join(node_list[idx] for idx, created in enumerate(nodes_created) if not created)
-        ))
+        )
 
         return 1
 
-    logging.info("Namespace '%s' has been successfully created" % namespace)
+    logging.info("Cluster has been successfully bootstrapped, cluster id is: %s" % cluster_id)
 
 if __name__ == "__main__":
     exit(main())
