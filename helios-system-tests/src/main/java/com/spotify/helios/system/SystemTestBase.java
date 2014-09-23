@@ -169,6 +169,7 @@ public abstract class SystemTestBase {
 
   private ZooKeeperTestManager zk;
   protected static String zooKeeperNamespace = null;
+  protected final String zkClusterId = String.valueOf(ThreadLocalRandom.current().nextInt(10000));
 
   @BeforeClass
   public static void staticSetup() {
@@ -477,6 +478,7 @@ public abstract class SystemTestBase {
     curator.newNamespaceAwareEnsurePath(Paths.statusHosts()).ensure(curator.getZookeeperClient());
     curator.newNamespaceAwareEnsurePath(Paths.statusMasters()).ensure(curator.getZookeeperClient());
     curator.newNamespaceAwareEnsurePath(Paths.historyJobs()).ensure(curator.getZookeeperClient());
+    curator.newNamespaceAwareEnsurePath(Paths.configId(zkClusterId));
 
     final List<String> argsList = Lists.newArrayList("-vvvv",
                                                      "--no-log-setup",
