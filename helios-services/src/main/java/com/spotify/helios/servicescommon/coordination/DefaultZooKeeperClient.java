@@ -28,10 +28,13 @@ import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.framework.listen.Listenable;
 import org.apache.curator.framework.recipes.nodes.PersistentEphemeralNode;
+import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.utils.EnsurePath;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZKUtil;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
@@ -42,6 +45,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.base.Throwables.propagate;
 import static com.google.common.base.Throwables.propagateIfInstanceOf;
@@ -54,9 +58,44 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
   private static final Logger log = LoggerFactory.getLogger(DefaultZooKeeperClient.class);
 
   private final CuratorFramework client;
+  private final String clusterId;
+  private final AtomicBoolean clusterIdExists;
+  private final Watcher watcher;
+  private final ConnectionStateListener connectionStateListener;
 
-  public DefaultZooKeeperClient(CuratorFramework client) {
+  public DefaultZooKeeperClient(final CuratorFramework client) {
+    this(client, null);
+  }
+
+  public DefaultZooKeeperClient(final CuratorFramework client, final String clusterId) {
     this.client = client;
+    this.clusterId = clusterId;
+
+    if (clusterId == null) {
+      this.clusterIdExists = null;
+      this.watcher = null;
+      this.connectionStateListener = null;
+      return;
+    }
+
+    this.clusterIdExists = new AtomicBoolean(false);
+
+    this.watcher = new Watcher() {
+      @Override
+      public void process(WatchedEvent event) {
+        log.error("*** WATCH EVENT - " + event.toString());
+        checkClusterIdExists(clusterId);
+      }
+    };
+
+    connectionStateListener = new ConnectionStateListener() {
+      @Override
+      public void stateChanged(CuratorFramework client, ConnectionState newState) {
+        if (newState == ConnectionState.RECONNECTED) {
+          checkClusterIdExists(clusterId);
+        }
+      }
+    };
   }
 
   @Override
@@ -67,12 +106,14 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
   @Override
   /** {@inheritDoc} */
   public void ensurePath(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     ensurePath(path, false);
   }
 
   @Override
   /** {@inheritDoc} */
   public void ensurePath(final String path, final boolean excludingLast) throws KeeperException {
+    assertClusterIdFlagTrue();
     EnsurePath ensurePath = client.newNamespaceAwareEnsurePath(path);
     if (excludingLast) {
       ensurePath = ensurePath.excludingLast();
@@ -100,6 +141,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public byte[] getData(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       return client.getData().forPath(path);
     } catch (Exception e) {
@@ -110,6 +152,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public Node getNode(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     final Stat stat = new Stat();
     try {
       byte[] bytes = client.getData().storingStatIn(stat).forPath(path);
@@ -122,6 +165,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public Stat exists(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       return client.checkExists().forPath(path);
     } catch (Exception e) {
@@ -133,10 +177,13 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
   @Override
   public void start() {
     client.start();
+    client.getConnectionStateListenable().addListener(connectionStateListener);
+    checkClusterIdExists(clusterId);
   }
 
   @Override
   public void close() {
+    client.getConnectionStateListenable().removeListener(connectionStateListener);
     client.close();
   }
 
@@ -144,6 +191,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
   public PersistentEphemeralNode persistentEphemeralNode(final String path,
                                                          final PersistentEphemeralNode.Mode mode,
                                                          final byte[] data) {
+    assertClusterIdFlagTrue();
     return new PersistentEphemeralNode(client, mode, path, data);
   }
 
@@ -154,6 +202,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public ZooKeeper.States getState() throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       return client.getZookeeperClient().getZooKeeper().getState();
     } catch (Exception e) {
@@ -164,6 +213,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public List<String> getChildren(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       return client.getChildren().forPath(path);
     } catch (Exception e) {
@@ -174,6 +224,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void deleteRecursive(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       final List<String> nodes = listRecursive(path);
       if (nodes.isEmpty()) {
@@ -192,6 +243,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public List<String> listRecursive(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       return ZKUtil.listSubTreeBFS(client.getZookeeperClient().getZooKeeper(), path);
     } catch (Exception e) {
@@ -202,6 +254,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void delete(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       client.delete().forPath(path);
     } catch (Exception e) {
@@ -212,6 +265,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void delete(final String path, final int version) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       client.getZookeeperClient().getZooKeeper().delete(path, version);
     } catch (Exception e) {
@@ -222,6 +276,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void createAndSetData(final String path, final byte[] data) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       client.create().forPath(path, data);
     } catch (Exception e) {
@@ -232,6 +287,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void create(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       client.create().forPath(path);
     } catch (Exception e) {
@@ -242,6 +298,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void createWithMode(final String path, final CreateMode mode) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       client.create().withMode(mode).forPath(path);
     } catch (Exception e) {
@@ -252,6 +309,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public void setData(final String path, final byte[] data) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       client.setData().forPath(path, data);
     } catch (Exception e) {
@@ -262,6 +320,7 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
 
   @Override
   public Stat stat(final String path) throws KeeperException {
+    assertClusterIdFlagTrue();
     try {
       return client.checkExists().forPath(path);
     } catch (Exception e) {
@@ -275,13 +334,14 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
                                                               final Path snapshotFile,
                                                               final JavaType valueType)
       throws IOException, InterruptedException {
+    assertClusterIdFlagTrue();
     return new PersistentPathChildrenCache<T>(client, path, snapshotFile, valueType);
   }
 
   @Override
   public Collection<CuratorTransactionResult> transaction(final List<ZooKeeperOperation> operations)
       throws KeeperException {
-
+    assertClusterIdFlagTrue();
     log.debug("transaction: {}", operations);
 
     if (operations.isEmpty()) {
@@ -311,5 +371,22 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
   public Collection<CuratorTransactionResult> transaction(final ZooKeeperOperation... operations)
       throws KeeperException {
     return transaction(asList(operations));
+  }
+
+  private void assertClusterIdFlagTrue() {
+    if (clusterId != null && !clusterIdExists.get()) {
+      throw new IllegalStateException("ZooKeeper cluster ID does not exist");
+    }
+  }
+
+  private void checkClusterIdExists(final String id) {
+    try {
+      final Stat stat = client.checkExists().usingWatcher(watcher).forPath(Paths.configId(id));
+      log.error("*** STAT {}", stat);
+      clusterIdExists.set(stat != null);
+    } catch (Exception e) {
+      clusterIdExists.set(false);
+      log.error("Exception while checking ZooKeeper cluster ID {}", clusterId, e);
+    }
   }
 }
