@@ -31,7 +31,6 @@ import com.google.common.collect.Ordering;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.spotify.helios.common.HeliosRuntimeException;
 import com.spotify.helios.common.Json;
-import com.spotify.helios.common.ZooKeeperNotInitializedException;
 import com.spotify.helios.common.descriptors.AgentInfo;
 import com.spotify.helios.common.descriptors.Deployment;
 import com.spotify.helios.common.descriptors.Goal;
@@ -44,6 +43,7 @@ import com.spotify.helios.common.descriptors.PortMapping;
 import com.spotify.helios.common.descriptors.Task;
 import com.spotify.helios.common.descriptors.TaskStatus;
 import com.spotify.helios.common.descriptors.TaskStatusEvent;
+import com.spotify.helios.servicescommon.coordination.Node;
 import com.spotify.helios.servicescommon.coordination.Paths;
 import com.spotify.helios.servicescommon.coordination.ZooKeeperClient;
 import com.spotify.helios.servicescommon.coordination.ZooKeeperClientProvider;
@@ -75,6 +75,7 @@ import static com.spotify.helios.common.descriptors.HostStatus.Status.UP;
 import static com.spotify.helios.servicescommon.coordination.ZooKeeperOperations.check;
 import static com.spotify.helios.servicescommon.coordination.ZooKeeperOperations.create;
 import static com.spotify.helios.servicescommon.coordination.ZooKeeperOperations.delete;
+import static com.spotify.helios.servicescommon.coordination.ZooKeeperOperations.set;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 
@@ -110,11 +111,9 @@ public class ZooKeeperMasterModel implements MasterModel {
       new TypeReference<Map<String, String>>() {};
 
   private final ZooKeeperClientProvider provider;
-  private final String namespace;
 
   public ZooKeeperMasterModel(final ZooKeeperClientProvider provider) {
     this.provider = provider;
-    this.namespace = this.provider.get("getNamespace").getCuratorFramework().getNamespace();
   }
 
   /**
@@ -123,21 +122,23 @@ public class ZooKeeperMasterModel implements MasterModel {
    * with the same value of @{code host}, the first one will win.
    */
   @Override
-  public void registerHost(final String host, final String id)
-      throws ZooKeeperNotInitializedException {
+  public void registerHost(final String host, final String id) {
     log.info("registering host: {}", host);
     final ZooKeeperClient client = provider.get("registerHost");
     try {
       // TODO (dano): this code is replicated in AgentZooKeeperRegistrar
-      client.transaction(create(Paths.configHost(host)),
-                         create(Paths.configHostJobs(host)),
-                         create(Paths.configHostPorts(host)),
-                         create(Paths.statusHost(host)),
-                         create(Paths.statusHostJobs(host)),
-                         // Finish registration by creating the id node last
-                         create(Paths.configHostId(host), id.getBytes(UTF_8)));
-    } catch (NoNodeException e) {
-      throw new ZooKeeperNotInitializedException(namespace, e);
+
+      // This would've been nice to do in a transaction but PathChildrenCache ensures paths
+      // so we can't know what paths already exist so assembling a suitable transaction is too
+      // painful.
+      client.ensurePath(Paths.configHost(host));
+      client.ensurePath(Paths.configHostJobs(host));
+      client.ensurePath(Paths.configHostPorts(host));
+      client.ensurePath(Paths.statusHost(host));
+      client.ensurePath(Paths.statusHostJobs(host));
+
+      // Finish registration by creating the id node last
+      client.createAndSetData(Paths.configHostId(host), id.getBytes(UTF_8));
     } catch (Exception e) {
       throw new HeliosRuntimeException("registering host " + host + " failed", e);
     }
@@ -266,7 +267,7 @@ public class ZooKeeperMasterModel implements MasterModel {
    * Adds a job into the configuration.
    */
   @Override
-  public void addJob(final Job job) throws JobExistsException, ZooKeeperNotInitializedException {
+  public void addJob(final Job job) throws JobExistsException {
     log.info("adding job: {}", job);
     final JobId id = job.getId();
     final UUID operationId = UUID.randomUUID();
@@ -274,7 +275,7 @@ public class ZooKeeperMasterModel implements MasterModel {
     final ZooKeeperClient client = provider.get("addJob");
     try {
       try {
-        client.ensureNodes(Paths.historyJob(id));
+        client.ensurePath(Paths.historyJob(id));
         client.transaction(create(Paths.configJob(id), job),
                            create(Paths.configJobRefShort(id), id),
                            create(Paths.configJobHosts(id)),
@@ -286,8 +287,6 @@ public class ZooKeeperMasterModel implements MasterModel {
         }
         throw new JobExistsException(id.toString());
       }
-    } catch (final NoNodeException e) {
-      throw new ZooKeeperNotInitializedException(namespace, e);
     } catch (final KeeperException e) {
       throw new HeliosRuntimeException("adding job " + job + " failed", e);
     }

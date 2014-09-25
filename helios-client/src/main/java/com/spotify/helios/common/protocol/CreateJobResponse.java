@@ -37,7 +37,6 @@ public class CreateJobResponse {
     INVALID_JOB_DEFINITION,
     UNKNOWN_JOB,
     AMBIGUOUS_JOB_REFERENCE,
-    ZOO_KEEPER_NOT_INITIALIZED
   }
 
   private final Status status;

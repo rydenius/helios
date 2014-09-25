@@ -127,19 +127,6 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
   }
 
   @Override
-  public void ensureNodes(String... nodes) throws KeeperException {
-    for (String node : nodes) {
-      try {
-        client.create().forPath(node);
-      } catch (KeeperException.NodeExistsException ignore) {
-      } catch (Exception e) {
-        propagateIfInstanceOf(e, KeeperException.class);
-        throw propagate(e);
-      }
-    }
-  }
-
-  @Override
   public byte[] getData(final String path) throws KeeperException {
     assertClusterIdFlagTrue();
     try {

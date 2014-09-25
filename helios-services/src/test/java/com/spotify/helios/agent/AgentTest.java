@@ -39,7 +39,6 @@ import com.spotify.helios.servicescommon.Reactor;
 import com.spotify.helios.servicescommon.ReactorFactory;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -270,7 +269,6 @@ public class AgentTest {
     verify(barSupervisor, atLeastOnce()).setGoal(STOP);
   }
 
-  @Ignore
   @SuppressWarnings("unchecked")
   @Test
   public void verifyAgentRecoversStateAndStartsSupervisorsWithNoInstructions() throws Exception {

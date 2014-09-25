@@ -64,5 +64,4 @@ public class ZooKeeperNamespacingTest extends SystemTestBase {
     assertEquals(NAMESPACE, result.get(0));
     assertEquals("zookeeper", result.get(1)); // we'll always find this
   }
-
 }

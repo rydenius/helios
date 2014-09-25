@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 
 import com.spotify.helios.common.HeliosException;
 import com.spotify.helios.common.JobValidator;
-import com.spotify.helios.common.ZooKeeperNotInitializedException;
 import com.spotify.helios.common.descriptors.Job;
 import com.spotify.helios.common.descriptors.JobId;
 import com.spotify.helios.common.descriptors.JobStatus;
@@ -61,7 +60,6 @@ import javax.ws.rs.QueryParam;
 
 import static com.spotify.helios.common.protocol.CreateJobResponse.Status.INVALID_JOB_DEFINITION;
 import static com.spotify.helios.common.protocol.CreateJobResponse.Status.JOB_ALREADY_EXISTS;
-import static com.spotify.helios.common.protocol.CreateJobResponse.Status.ZOO_KEEPER_NOT_INITIALIZED;
 import static com.spotify.helios.master.http.Responses.badRequest;
 import static com.spotify.helios.master.http.Responses.notFound;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -142,10 +140,6 @@ public class JobsResource {
     }
     try {
       model.addJob(job.toBuilder().build());
-    } catch (ZooKeeperNotInitializedException e) {
-      throw badRequest(new CreateJobResponse(ZOO_KEEPER_NOT_INITIALIZED,
-                                             ImmutableList.of(e.getMessage()),
-          jobIdString));
     } catch (JobExistsException e) {
       throw badRequest(new CreateJobResponse(JOB_ALREADY_EXISTS, ImmutableList.<String>of(),
           jobIdString));

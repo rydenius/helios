@@ -51,8 +51,8 @@ public class ZooKeeperOperations {
     return new CreateMany(nodes);
   }
 
-  public static ZooKeeperOperation create(final String... paths) {
-    return new CreateEmpty(paths);
+  public static ZooKeeperOperation create(final String path) {
+    return new CreateEmpty(path);
   }
 
   public static ZooKeeperOperation create(final String path, final Descriptor data) {

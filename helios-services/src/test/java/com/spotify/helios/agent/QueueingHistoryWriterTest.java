@@ -95,12 +95,8 @@ public class QueueingHistoryWriterTest {
     makeWriter(client);
     masterModel = new ZooKeeperMasterModel(new ZooKeeperClientProvider(client,
         ZooKeeperModelReporter.noop()));
-    client.ensurePath(Paths.configHosts());
-    client.ensurePath(Paths.configJobRefs());
     client.ensurePath(Paths.configJobs());
-    client.ensurePath(Paths.statusHosts());
-    client.ensurePath(Paths.statusMasters());
-    client.ensurePath(Paths.historyJobs());
+    client.ensurePath(Paths.configJobRefs());
     client.ensurePath(Paths.historyJobHostEvents(JOB_ID, HOSTNAME));
     masterModel.registerHost(HOSTNAME, "foo");
     masterModel.addJob(JOB);
