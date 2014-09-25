@@ -321,7 +321,6 @@ public class DefaultZooKeeperClient implements ZooKeeperClient {
                                                               final Path snapshotFile,
                                                               final JavaType valueType)
       throws IOException, InterruptedException {
-    assertClusterIdFlagTrue();
     return new PersistentPathChildrenCache<T>(client, path, clusterId, snapshotFile, valueType);
   }
 
