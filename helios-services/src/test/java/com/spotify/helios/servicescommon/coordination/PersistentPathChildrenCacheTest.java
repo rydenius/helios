@@ -121,6 +121,7 @@ public class PersistentPathChildrenCacheTest {
   }
 
   private static final String PATH = "/foos";
+  private static final String CLUSTER_ID = "dummy-cluster-id";
 
   private ZooKeeperStandaloneServerManager zk;
 
@@ -270,7 +271,7 @@ public class PersistentPathChildrenCacheTest {
 
   private void startCache() throws IOException, InterruptedException {
     reset(listener);
-    cache = new PersistentPathChildrenCache<>(zk.curator(), PATH, stateFile, Json.type(DataPojo.class));
+    cache = new PersistentPathChildrenCache<>(zk.curator(), PATH, CLUSTER_ID, stateFile, Json.type(DataPojo.class));
     cache.addListener(listener);
     cache.startAsync().awaitRunning();
   }
