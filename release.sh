@@ -6,16 +6,8 @@
 #	exit 1
 #fi
 
-RELEASE_VERSION=$1
-if [[ -n "$RELEASE_VERSION" ]]
-then
-  RELEASE_ARGS="-DreleaseVersion=$RELEASE_VERSION"
-fi
+mvn -P sign-artifacts -DskipTests clean deploy
 
-# Use the maven release plugin to update the pom versions and tag the release commit
-mvn -Darguments="-DskipTests" -B release:prepare release:clean $RELEASE_ARGS
-
-VERSION=`git describe --abbrev=0 rculbertson/helios-go`
-echo $VERSION > target/version
-echo "Created release tag" $VERSION
-echo "Remember to: ./push-release.sh"
+git push origin rculbertson/helios-go
+TAGREF=refs/tags/$(git describe --abbrev=0 rculbertson/helios-go)
+git push origin ${TAGREF}:${TAGREF}
