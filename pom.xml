@@ -101,7 +101,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <revision>0-SNAPSHOT</revision>
   </properties>
 
   <modules>
@@ -122,6 +121,9 @@
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
+      <properties>
+        <revision>0-SNAPSHOT</revision>
+      </properties>
       <build>
         <plugins>
           <plugin>
