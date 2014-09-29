@@ -6,8 +6,10 @@
 #	exit 1
 #fi
 
-mvn -P sign-artifacts -DskipTests clean deploy
+GIT_SHORT_ID=`git rev-parse --short HEAD`
 
-git push origin rculbertson/helios-go
-TAGREF=refs/tags/$(git describe --abbrev=0 rculbertson/helios-go)
-git push origin ${TAGREF}:${TAGREF}
+mvn -P sign-artifacts -DskipTests -Drevision=+$GO_PIPELINE_COUNTER.$GIT_SHORT_ID clean deploy
+
+#git push origin rculbertson/helios-go
+#TAGREF=refs/tags/$(git describe --abbrev=0 rculbertson/helios-go)
+#git push origin ${TAGREF}:${TAGREF}
