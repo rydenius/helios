@@ -8,7 +8,9 @@
 
 GIT_SHORT_ID=`git rev-parse --short HEAD`
 
-mvn -P sign-artifacts -DskipTests -Drevision=+$GO_PIPELINE_COUNTER.$GIT_SHORT_ID clean deploy
+#commenting out for testing
+#mvn -Drevision=+$GO_PIPELINE_COUNTER.$GIT_SHORT_ID nexus-staging:deploy-staged
+mvn -Drevision=+$GO_PIPELINE_COUNTER.$GIT_SHORT_ID org.apache.maven.plugins:maven-help-plugin:2.2:evaluate -Dexpression=project.version | grep -v '\[' > target/version
 
 #git push origin rculbertson/helios-go
 #TAGREF=refs/tags/$(git describe --abbrev=0 rculbertson/helios-go)
