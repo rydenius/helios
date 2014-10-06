@@ -22,7 +22,9 @@
 package com.spotify.helios.agent;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 
 import com.spotify.docker.client.ContainerNotFoundException;
@@ -46,7 +48,16 @@ import com.spotify.helios.servicescommon.InterruptingExecutionThreadService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.Map;
+
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
 
 /**
  * A runner service that starts a container once.
@@ -65,6 +76,8 @@ class TaskRunner extends InterruptingExecutionThreadService {
   private final ServiceRegistrar registrar;
   private Optional<ServiceRegistrationHandle> serviceRegistrationHandle;
   private Optional<String> containerId;
+  private Optional<String> taskUpAddress;
+  private TaskUpListener taskUpListener;
 
   private TaskRunner(final Builder builder) {
     super("TaskRunner(" + builder.taskConfig.name() + ")");
@@ -107,6 +120,11 @@ class TaskRunner extends InterruptingExecutionThreadService {
     if (containerId.isPresent()) {
       final String container = containerId.get();
 
+      // Stop listening for the task to come up
+      if (taskUpListener != null) {
+        taskUpListener.stopAsync();
+      }
+
       // Interrupt the thread blocking on waitContainer
       stopAsync().awaitTerminated();
 
@@ -134,13 +152,29 @@ class TaskRunner extends InterruptingExecutionThreadService {
     // Delay
     Thread.sleep(delayMillis);
 
+    boolean autoregister = false;
+    if ((config.registration() != null) &&
+        !config.registration().getEndpoints().isEmpty()) {
+      try {
+        taskUpListener = new TaskUpListener();
+        taskUpListener.startAsync().awaitRunning();
+      } catch (Exception e) {
+        autoregister = true;
+        log.error("couldn't start TaskUpListener for {}, will autoregister when container starts",
+                  e);
+      }
+    }
+
     // Create and start container if necessary
     final String containerId = createAndStartContainer();
     this.containerId = Optional.of(containerId);
     listener.running();
 
-    // Register and wait for container to exit
-    serviceRegistrationHandle = Optional.fromNullable(registrar.register(config.registration()));
+    if (autoregister) {
+      registerService();
+    }
+
+    // Wait for container to exit
     final ContainerExit exit;
     try {
       exit = docker.waitContainer(containerId);
@@ -181,7 +215,12 @@ class TaskRunner extends InterruptingExecutionThreadService {
     }
 
     // Create container
-    final ContainerConfig containerConfig = config.containerConfig(imageInfo);
+    Map<String, String> extraEnv = null;
+    if (taskUpAddress.isPresent()) {
+      extraEnv = ImmutableMap.of("HELIOS_TASK_UP_ADDRESS", taskUpAddress.get());
+    }
+
+    final ContainerConfig containerConfig = config.containerConfig(imageInfo, extraEnv);
     final String name = config.containerName();
     listener.creating();
     final ContainerCreation container = docker.createContainer(containerConfig, name);
@@ -238,6 +277,47 @@ class TaskRunner extends InterruptingExecutionThreadService {
       }
       throw e;
     }
+  }
+
+  private class TaskUpListener extends InterruptingExecutionThreadService {
+
+    private final ServerSocket serverSocket;
+
+    private TaskUpListener() throws IOException, InterruptedException {
+      super("TaskUpListener(" + config.name() + ")");
+      serverSocket = new ServerSocket();
+    }
+
+    @Override
+    protected void startUp() throws Exception {
+      super.startUp();
+
+      serverSocket.bind(null);
+      taskUpAddress = Optional.of(format("%s:%d", serverSocket.getInetAddress().getHostAddress(),
+                                         serverSocket.getLocalPort()));
+    }
+
+    @Override
+    public synchronized void run() {
+      try (
+          Socket clientSocket = serverSocket.accept();
+          ) {
+        registerService();
+        serverSocket.close();
+      } catch (Exception e) {
+        log.error("Registering container {} failed", e);
+      }
+    }
+
+    @Override
+    protected void shutDown() throws Exception {
+      super.shutDown();
+      serverSocket.close();
+    }
+  }
+
+  private synchronized void registerService() throws InterruptedException {
+    serviceRegistrationHandle = Optional.fromNullable(registrar.register(config.registration()));
   }
 
   public static interface Listener {

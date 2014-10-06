@@ -97,12 +97,14 @@ public class TaskConfig {
 
   /**
    * Create docker container configuration for a job.
+   * @param extraEnv Map of extra environment variables to tack onto this job.
    */
-  public ContainerConfig containerConfig(final ImageInfo imageInfo) {
+  public ContainerConfig containerConfig(final ImageInfo imageInfo,
+                                         final Map<String, String> extraEnv) {
     final ContainerConfig.Builder builder = ContainerConfig.builder();
     builder.image(job.getImage());
     builder.cmd(job.getCommand());
-    builder.env(containerEnvStrings());
+    builder.env(containerEnvStrings(extraEnv));
     builder.exposedPorts(containerExposedPorts());
     builder.hostname(containerHostname(job.getId().getName() + "_" +
                                        job.getId().getVersion()));
@@ -232,12 +234,20 @@ public class TaskConfig {
   /**
    * Compute docker container environment variables.
    */
-  private List<String> containerEnvStrings() {
+  private List<String> containerEnvStrings(Map<String, String> extraEnv) {
     final Map<String, String> env = containerEnv();
     final List<String> envList = Lists.newArrayList();
+
     for (final Map.Entry<String, String> entry : env.entrySet()) {
       envList.add(entry.getKey() + '=' + entry.getValue());
     }
+
+    if (extraEnv != null) {
+      for (final Map.Entry<String, String> entry : extraEnv.entrySet()) {
+        envList.add(entry.getKey() + '=' + entry.getValue());
+      }
+    }
+
     return envList;
   }
 
