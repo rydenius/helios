@@ -131,20 +131,26 @@ public class JobsResource {
   @Produces(APPLICATION_JSON)
   @Timed
   @ExceptionMetered
-  public CreateJobResponse post(@Valid final Job job) {
+  public CreateJobResponse post(@Valid final Job job,
+                                @QueryParam("user") final String username) {
     final Collection<String> errors = JOB_VALIDATOR.validate(job);
-    final String jobIdString = job.toBuilder().build().getId().toString();
+    final Job actualJob = job.toBuilder()
+        .setCreatingUser(username)
+        // if job had an id coming in, preserve it
+        .setHash(job.getId().getHash())
+        .build();
+    final String jobIdString = actualJob.getId().toString();
     if (!errors.isEmpty()) {
       throw badRequest(new CreateJobResponse(INVALID_JOB_DEFINITION, ImmutableList.copyOf(errors),
           jobIdString));
     }
     try {
-      model.addJob(job.toBuilder().build());
+      model.addJob(actualJob);
     } catch (JobExistsException e) {
       throw badRequest(new CreateJobResponse(JOB_ALREADY_EXISTS, ImmutableList.<String>of(),
           jobIdString));
     }
-    log.info("created job: {}", job);
+    log.info("created job: {}", actualJob);
     return new CreateJobResponse(CreateJobResponse.Status.OK, ImmutableList.<String>of(),
         jobIdString);
   }
