@@ -7,7 +7,7 @@ mvn -Drevision=${REVISION} org.apache.maven.plugins:maven-help-plugin:2.2:evalua
 
 # Tar up the staged release and all the pom files. We will use these in subsequent build steps to
 # perform the actual release.
-tar -zcvf helios-staged-release.tar.gz version `find . -name nexus-staging && find . -name pom.xml`
+tar -zcvf helios-staged-release.tar.gz release.sh version `find . -name nexus-staging && find . -name pom.xml`
 
 # Copy all debian packages into ./debs, and put them into a tarball
 mkdir debs
