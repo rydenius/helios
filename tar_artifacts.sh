@@ -7,4 +7,4 @@ tar -zcvf helios-staged-release.tar.gz `find . -name nexus-staging && find . -na
 # Copy all debian packages into ./debs, and put them into a tarball
 mkdir debs
 find . -name *.deb | xargs -I FILE cp FILE debs
-tar -C debs -zcf debs.tar.gz .
+tar -C debs -zcf helios-debs.tar.gz .
